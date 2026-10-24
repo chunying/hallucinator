@@ -1,0 +1,69 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+from abc import abstractmethod
+import os
+import sys
+import subprocess
+from pathlib import Path
+
+db = {
+    'dblp':     { 'cmd': 'dblp-offline',        'db': 'dblp.db' },
+    'acl':      { 'cmd': 'acl-offline',         'db': 'acl.db' },
+    'iacr':     { 'cmd': 'iacr-eprint-offline', 'db': 'iacr.db' },
+    'arxiv':    { 'cmd': 'arxiv-offline',       'db': 'arxiv.db' },
+    'openalex': { 'cmd': 'openalex-offline',    'db': 'openalex.idx' },
+}
+
+me = Path(__file__).resolve()
+medir = os.path.dirname(me)
+#print(me, medir)
+
+uid = os.getuid()
+gid = os.getgid()
+workdir = os.getcwd()
+filepos  = -1
+filename = None
+
+## find the candidate file to check
+exts = [ 'pdf', 'bbl', 'bib', 'zip', 'gz' ]
+for i in range(1, len(sys.argv)):
+    fn = sys.argv[i]
+    rpos = fn.rfind('.')
+    if rpos == -1: continue
+    if fn[rpos+1:].lower() in exts:
+        filepos = i
+        filename = fn
+        break
+
+if filename != None:
+    workdir = os.path.dirname(filename)
+    if workdir == '': workdir = '.'
+    sys.argv[filepos] = os.path.basename(filename)
+
+def _docker_run(args = None):
+    basecmd = [ 'docker', 'run', '-it', '--rm',
+            '--user', f'{uid}:{gid}',
+            '-v', f'{medir}/db:/db',
+            '-v', f'{workdir}:/working',
+            '-w', '/working', '-e', 'HOME=/working',
+            '-e', 'HISTFILE=/dev/null',
+            'chuang/hallucinator' ]
+    if args == None:
+        subprocess.run(basecmd + [ 'bash', '-l' ])
+    else:
+        basecmd += [ 'hallucinator-tui' ]
+        for d in db:
+            if os.path.exists(f'{medir}/db/{db[d]["db"]}'):
+                basecmd += [ f'--{db[d]["cmd"]}', f'/db/{db[d]["db"]}' ]
+        subprocess.run(basecmd + args)
+
+if len(sys.argv) < 2:
+    print(f'# usage: {sys.argv[0]} [options] /path/to/file-to-check.ext')
+    print('# ENTERING INTERACTIVE MODE DUE TO MISSING OPTIONS/FILE')
+    _docker_run()
+    sys.exit(1)
+
+_docker_run(sys.argv[1:])
+
+# vim: set tabstop=4 expandtab shiftwidth=4 softtabstop=4 number cindent fileencoding=utf-8 :

@@ -1,0 +1,6 @@
+
+# database files
+/db/.*
+/db/*.db
+/db/openalex*
+
