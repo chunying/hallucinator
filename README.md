@@ -89,7 +89,8 @@ The script:
    `~/.local/share/hallucinator` links to `/db`, so `hallucinator-tui` finds the
    offline databases in its default location without extra options.
 3. Runs `hallucinator-tui` as your own UID/GID, so any output files belong to
-   you. The container is removed when the tool exits.
+   you. The container is removed when the tool exits. On platforms where Python
+   has no `os.getuid` (such as Windows), the scripts use UID/GID 0 instead.
 
 All other arguments are passed through to `hallucinator-tui` unchanged. For the
 available options, see the upstream project or run:
@@ -101,9 +102,9 @@ available options, see the upstream project or run:
 ### Interactive shell
 
 Running `./hallucinator` without arguments prints the usage line and opens a
-login shell in the container, with the current directory mounted at
-`/home/workdir` and the `hallucinator` volume at `/db`. From there you can run `hallucinator-tui` or
-`hallucinator-cli` by hand.
+login shell in the container. Only the `hallucinator` volume is mounted, at
+`/db`, which is also the starting directory; no host directory is visible.
+From there you can run `hallucinator-tui` or `hallucinator-cli` by hand.
 
 ## License
 
