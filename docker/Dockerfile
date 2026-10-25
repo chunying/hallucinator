@@ -26,7 +26,13 @@ COPY --from=builder /build/hallucinator/hallucinator-rs/target/release/hallucina
 COPY profile /etc/profile.d/99-profile.sh
 RUN chmod 755 /etc/profile.d/99-profile.sh
 
+RUN mkdir -p /home/.local/share
+RUN (cd /home/.local/share/; ln -sf /db ./hallucinator)
+RUN chmod 1777 /home
+
+COPY tini.sh /sbin/tini.sh
+RUN chmod 755 /sbin/tini.sh
 COPY entrypoint.sh /entrypoint.sh
 
-ENTRYPOINT [ "/sbin/tini", "--" ]
+ENTRYPOINT [ "/sbin/tini.sh", "--" ]
 CMD [ "/bin/bash", "/entrypoint.sh" ]

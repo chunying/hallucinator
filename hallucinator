@@ -1,23 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from abc import abstractmethod
 import os
 import sys
 import subprocess
-from pathlib import Path
-
-db = {
-    'dblp':     { 'cmd': 'dblp-offline',        'db': 'dblp.db' },
-    'acl':      { 'cmd': 'acl-offline',         'db': 'acl.db' },
-    'iacr':     { 'cmd': 'iacr-eprint-offline', 'db': 'iacr.db' },
-    'arxiv':    { 'cmd': 'arxiv-offline',       'db': 'arxiv.db' },
-    'openalex': { 'cmd': 'openalex-offline',    'db': 'openalex.idx' },
-}
-
-me = Path(__file__).resolve()
-medir = os.path.dirname(me)
-#print(me, medir)
 
 uid = os.getuid()
 gid = os.getgid()
@@ -44,18 +30,16 @@ if filename != None:
 def _docker_run(args = None):
     basecmd = [ 'docker', 'run', '-it', '--rm',
             '--user', f'{uid}:{gid}',
-            '-v', f'{medir}/db:/db',
-            '-v', f'{workdir}:/working',
-            '-w', '/working', '-e', 'HOME=/working',
+            '-v', f'hallucinator:/db',
+            '-v', f'{workdir}:/home/workdir',
+            '-w', '/home/workdir', '-e', 'HOME=/home',
+            '-e', f'USER_UID={uid}', '-e', f'USER_GID={gid}',
             '-e', 'HISTFILE=/dev/null',
             'chuang/hallucinator' ]
     if args == None:
         subprocess.run(basecmd + [ 'bash', '-l' ])
     else:
         basecmd += [ 'hallucinator-tui' ]
-        for d in db:
-            if os.path.exists(f'{medir}/db/{db[d]["db"]}'):
-                basecmd += [ f'--{db[d]["cmd"]}', f'/db/{db[d]["db"]}' ]
         subprocess.run(basecmd + args)
 
 if len(sys.argv) < 2:

@@ -4,7 +4,6 @@
 import os
 import sys
 import subprocess
-from pathlib import Path
 
 db = {
     'dblp':     { 'default': True,  'cmd': 'update-dblp',        'db': 'dblp.db' },
@@ -14,27 +13,37 @@ db = {
     'openalex': { 'default': False, 'cmd': 'update-openalex',    'db': 'openalex.idx' },
 }
 
-me = Path(__file__).resolve()
-medir = os.path.dirname(me)
-#print(me, medir)
-
 uid = os.getuid()
 gid = os.getgid()
 
-def _docker_run(cmd):
+print(f"""## update hallucinator database
+# usage: {sys.argv[0]} [db-name ... | shell]
+# available db names: """ + ' '.join([ d + ('*' if db[d]['default'] else '') for d in db ]))
+print('# db name with an asterisk(*) is updated when no arguments is provided\n')
+
+def _docker_run(cmd = None):
     basecmd = [ 'docker', 'run', '-it', '--rm',
-            '--user', f'{uid}:{gid}',
-            '-v', f'{medir}/db:/db', '-w', '/db', '-e', 'HOME=/db' ]
+        '-v', f'hallucinator:/db', '-w', '/db', '-e', 'HOME=/home',
+        '-e', f'USER_UID={uid}', '-e', f'USER_GID={gid}' ]
     kat = os.getenv('KAGGLE_API_TOKEN')
     if kat != None: basecmd += [ '-e', f'KAGGLE_API_TOKEN={kat}' ]
-    basecmd += [ 'chuang/hallucinator', 'hallucinator-cli' ]
-    subprocess.run(basecmd + cmd)
+    basecmd += [ 'chuang/hallucinator' ]
+    if cmd == None:
+        print('>>> ENTERING INTERACTIVE MODE')
+        subprocess.run(basecmd + [ 'bash', '-l' ])
+    else:
+        print('>>> UPDATING DATABASE')
+        subprocess.run(basecmd + cmd)
+
+if 'shell' in sys.argv[1:]:
+    _docker_run()
+    sys.exit(0)
 
 if len(sys.argv[1:]) <= 0:
     for d in db:
-        if db[d]['default']: _docker_run([ db[d]['cmd'], f'./{db[d]["db"]}' ])
+        if db[d]['default']: _docker_run([ 'hallucinator-cli', db[d]['cmd'], f'./{db[d]["db"]}' ])
 else:
     for d in sys.argv[1:]:
-        if d in db: _docker_run([ db[d]['cmd'], f'./{db[d]["db"]}' ])
+        if d in db: _docker_run([ 'hallucinator-cli', db[d]['cmd'], f'./{db[d]["db"]}' ])
 
 # vim: set tabstop=4 expandtab shiftwidth=4 softtabstop=4 number cindent fileencoding=utf-8 :
