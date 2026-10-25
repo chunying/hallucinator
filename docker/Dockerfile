@@ -14,7 +14,7 @@ WORKDIR /
 
 FROM alpine:latest AS runtime
 
-RUN apk update && apk upgrade && apk add --no-cache tini bash htop neovim musl-locales musl-locales-lang \
+RUN apk update && apk upgrade && apk add --no-cache tini bash curl unzip musl-locales musl-locales-lang \
 		fontconfig freetype libstdc++ libbz2
 
 ENV LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8
