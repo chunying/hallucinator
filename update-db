@@ -13,8 +13,10 @@ db = {
     'openalex': { 'default': False, 'cmd': 'update-openalex',    'db': 'openalex.idx' },
 }
 
-uid = os.getuid()
-gid = os.getgid()
+uid = gid = 0
+if hasattr(os, "getuid"):
+    uid = os.getuid()
+    gid = os.getgid()
 
 print(f"""## update hallucinator database
 # usage: {sys.argv[0]} [db-name ... | shell]

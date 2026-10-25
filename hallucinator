@@ -5,9 +5,11 @@ import os
 import sys
 import subprocess
 
-uid = os.getuid()
-gid = os.getgid()
-workdir = os.getcwd()
+uid = gid = 0
+if hasattr(os, "getuid"):
+    uid = os.getuid()
+    gid = os.getgid()
+workdir = None
 filepos  = -1
 filename = None
 
@@ -24,23 +26,25 @@ for i in range(1, len(sys.argv)):
 
 if filename != None:
     workdir = os.path.dirname(filename)
-    if workdir == '': workdir = '.'
+    if workdir == '': workdir = os.getcwd()
     sys.argv[filepos] = os.path.basename(filename)
 
 def _docker_run(args = None):
     basecmd = [ 'docker', 'run', '-it', '--rm',
             '--user', f'{uid}:{gid}',
             '-v', f'hallucinator:/db',
-            '-v', f'{workdir}:/home/workdir',
-            '-w', '/home/workdir', '-e', 'HOME=/home',
+            '-e', 'HOME=/home',
             '-e', f'USER_UID={uid}', '-e', f'USER_GID={gid}',
-            '-e', 'HISTFILE=/dev/null',
-            'chuang/hallucinator' ]
+            '-e', 'HISTFILE=/dev/null' ]
+    if workdir == None:
+        basecmd += [ '-w', '/db' ]
+    else:
+        basecmd += [ '-v', f'{workdir}:/home/workdir', '-w', '/home/workdir' ]
+    basecmd += [ 'chuang/hallucinator' ]
     if args == None:
         subprocess.run(basecmd + [ 'bash', '-l' ])
     else:
-        basecmd += [ 'hallucinator-tui' ]
-        subprocess.run(basecmd + args)
+        subprocess.run(basecmd + [ 'hallucinator-tui' ] + args)
 
 if len(sys.argv) < 2:
     print(f'# usage: {sys.argv[0]} [options] /path/to/file-to-check.ext')
