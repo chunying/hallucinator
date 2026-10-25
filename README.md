@@ -13,6 +13,8 @@ bibliographic databases.
 - Docker with the Buildx plugin (included in Docker Desktop and recent Docker Engine releases)
 - Python 3 (for the `hallucinator` and `update-db` wrapper scripts)
 
+On Windows, see [Windows](#windows).
+
 ## Repository layout
 
 | Path                   | Description                                                        |
@@ -152,6 +154,36 @@ Running `./hallucinator` without arguments prints the usage line and opens a
 login shell in the container. Only the `hallucinator` volume is mounted, at
 `/db`, which is also the starting directory; no host directory is visible.
 From there you can run `hallucinator-tui` or `hallucinator-cli` by hand.
+
+## Windows
+
+The wrapper scripts work on Windows with Docker Desktop and Python 3. Run them
+in Windows Terminal (PowerShell or Command Prompt).
+
+**Pull the image from Docker Hub.** `build.sh` is a POSIX shell script, so on
+Windows use the published multi-arch image instead of building it:
+
+```powershell
+docker pull chunyingh/hallucinator
+```
+
+Run the same command again to pick up a newer image.
+
+**Run the scripts through Python.** Windows ignores the `#!/usr/bin/env python3`
+line, so `./hallucinator` does not work. Pass the script to the Python launcher
+`py` instead (or to `python` if your installation has no `py`):
+
+```powershell
+py update-db
+py update-db arxiv openalex
+py hallucinator C:\Users\me\Papers\paper.pdf
+py hallucinator                 # interactive shell
+```
+
+Paths with backslashes, forward slashes or spaces all work. Everything else
+behaves as described above, except that the container runs as root (UID/GID 0),
+because Windows has no Unix user IDs. This has no effect on the files you see
+in Windows.
 
 ## License
 
