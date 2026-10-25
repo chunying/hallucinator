@@ -24,7 +24,6 @@ bibliographic databases.
 | `docker/tini.sh`       | Container entrypoint: hands `/db` to your UID/GID, then starts `tini` |
 | `docker/entrypoint.sh` | Default container command (keeps the container idle)               |
 | `docker/profile`       | Shell prompt and aliases for interactive sessions                  |
-| `BUILDX`               | One-time commands to set up a multi-arch `buildx` builder for `build.sh push` |
 
 ## Build the image
 
@@ -59,8 +58,7 @@ the local image store. Before the first push:
    ```
 
 2. Create a builder that uses the `docker-container` driver, because the
-   default `docker` driver usually cannot build multi-platform images. The
-   commands are also in the `BUILDX` file:
+   default `docker` driver usually cannot build multi-platform images:
 
    ```sh
    docker buildx create --name multiarch-builder --driver docker-container --use
