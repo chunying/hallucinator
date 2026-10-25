@@ -29,7 +29,7 @@ def _docker_run(cmd = None):
         '-e', f'USER_UID={uid}', '-e', f'USER_GID={gid}' ]
     kat = os.getenv('KAGGLE_API_TOKEN')
     if kat != None: basecmd += [ '-e', f'KAGGLE_API_TOKEN={kat}' ]
-    basecmd += [ 'chuang/hallucinator' ]
+    basecmd += [ 'chunyingh/hallucinator' ]
     if cmd == None:
         print('>>> ENTERING INTERACTIVE MODE')
         subprocess.run(basecmd + [ 'bash', '-l' ])

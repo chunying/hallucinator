@@ -1,2 +1,2 @@
 #!/bin/sh
-docker build -t chuang/hallucinator ./docker
+docker build -t chunyingh/hallucinator ./docker

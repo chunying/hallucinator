@@ -40,7 +40,7 @@ def _docker_run(args = None):
         basecmd += [ '-w', '/db' ]
     else:
         basecmd += [ '-v', f'{workdir}:/home/workdir', '-w', '/home/workdir' ]
-    basecmd += [ 'chuang/hallucinator' ]
+    basecmd += [ 'chunyingh/hallucinator' ]
     if args == None:
         subprocess.run(basecmd + [ 'bash', '-l' ])
     else:

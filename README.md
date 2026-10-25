@@ -17,7 +17,7 @@ bibliographic databases.
 
 | Path                   | Description                                                        |
 |------------------------|--------------------------------------------------------------------|
-| `build.sh`             | Builds the `chuang/hallucinator` Docker image                      |
+| `build.sh`             | Builds the `chunyingh/hallucinator` Docker image                   |
 | `hallucinator`         | Runs `hallucinator-tui` on a file inside the container             |
 | `update-db`            | Downloads or updates the offline databases in the `hallucinator` volume |
 | `docker/Dockerfile`    | Multi-stage build: compiles the Rust tools, then copies them into an Alpine runtime image |
@@ -34,7 +34,7 @@ sh build.sh
 The build clones the latest upstream `hallucinator` source and compiles
 `hallucinator-tui` and `hallucinator-cli` with `cargo build --release`. The
 binaries are installed into an Alpine-based runtime image tagged
-`chuang/hallucinator`. To pick up upstream changes, run the build again.
+`chunyingh/hallucinator`. To pick up upstream changes, run the build again.
 
 ## Offline databases
 
