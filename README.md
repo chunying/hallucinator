@@ -150,10 +150,19 @@ available options, see the upstream project or run:
 
 ### Interactive shell
 
+```sh
+./hallucinator          # shell with only the database volume
+./hallucinator mount    # shell with the current directory mounted as well
+```
+
 Running `./hallucinator` without arguments prints the usage line and opens a
 login shell in the container. Only the `hallucinator` volume is mounted, at
 `/db`, which is also the starting directory; no host directory is visible.
-From there you can run `hallucinator-tui` or `hallucinator-cli` by hand.
+
+With `mount`, the shell also mounts the current directory as `/home/workdir`
+and starts there, so you can work on the files in it.
+
+From either shell you can run `hallucinator-tui` or `hallucinator-cli` by hand.
 
 ## Windows
 
@@ -178,6 +187,7 @@ py update-db
 py update-db arxiv openalex
 py hallucinator C:\Users\me\Papers\paper.pdf
 py hallucinator                 # interactive shell
+py hallucinator mount           # interactive shell with the current folder mounted
 ```
 
 Paths with backslashes, forward slashes or spaces all work. Everything else

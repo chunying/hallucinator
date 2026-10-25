@@ -31,6 +31,10 @@ if filename != None:
     workdir = os.path.dirname(os.path.abspath(filename))
     sys.argv[filepos] = os.path.basename(filename)
 
+if 'mount' in sys.argv[1:]:
+    workdir = os.getcwd()
+    sys.argv.remove('mount')
+
 def _docker_run(args = None):
     basecmd = [ 'docker', 'run', '-it', '--rm',
             '--user', f'{uid}:{gid}',
