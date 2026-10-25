@@ -1,0 +1,2 @@
+# keep LF line endings on Windows checkouts; the scripts run inside a Linux container
+* text=auto eol=lf
