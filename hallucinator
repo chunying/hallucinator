@@ -25,8 +25,10 @@ for i in range(1, len(sys.argv)):
         break
 
 if filename != None:
-    workdir = os.path.dirname(filename)
-    if workdir == '': workdir = os.getcwd()
+    if not os.path.isfile(filename):
+        print(f'# file not found: {filename}')
+        sys.exit(1)
+    workdir = os.path.dirname(os.path.abspath(filename))
     sys.argv[filepos] = os.path.basename(filename)
 
 def _docker_run(args = None):
@@ -42,16 +44,15 @@ def _docker_run(args = None):
         basecmd += [ '-v', f'{workdir}:/home/workdir', '-w', '/home/workdir' ]
     basecmd += [ 'chunyingh/hallucinator' ]
     if args == None:
-        subprocess.run(basecmd + [ 'bash', '-l' ])
+        return subprocess.run(basecmd + [ 'bash', '-l' ]).returncode
     else:
-        subprocess.run(basecmd + [ 'hallucinator-tui' ] + args)
+        return subprocess.run(basecmd + [ 'hallucinator-tui' ] + args).returncode
 
 if len(sys.argv) < 2:
     print(f'# usage: {sys.argv[0]} [options] /path/to/file-to-check.ext')
     print('# ENTERING INTERACTIVE MODE DUE TO MISSING OPTIONS/FILE')
-    _docker_run()
-    sys.exit(1)
+    sys.exit(_docker_run())
 
-_docker_run(sys.argv[1:])
+sys.exit(_docker_run(sys.argv[1:]))
 
 # vim: set tabstop=4 expandtab shiftwidth=4 softtabstop=4 number cindent fileencoding=utf-8 :
