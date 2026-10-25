@@ -21,31 +21,46 @@ if hasattr(os, "getuid"):
 print(f"""## update hallucinator database
 # usage: {sys.argv[0]} [db-name ... | shell]
 # available db names: """ + ' '.join([ d + ('*' if db[d]['default'] else '') for d in db ]))
-print('# db name with an asterisk(*) is updated when no arguments is provided\n')
+print('# db name with an asterisk(*) is updated when no argument is provided\n')
 
-def _docker_run(cmd = None):
+def _docker_run(cmd = None, name = None):
     basecmd = [ 'docker', 'run', '-it', '--rm',
         '-v', f'hallucinator:/db', '-w', '/db', '-e', 'HOME=/home',
         '-e', f'USER_UID={uid}', '-e', f'USER_GID={gid}' ]
-    kat = os.getenv('KAGGLE_API_TOKEN')
-    if kat != None: basecmd += [ '-e', f'KAGGLE_API_TOKEN={kat}' ]
+    # pass the name only, so the token value does not show up in the host process list
+    if os.getenv('KAGGLE_API_TOKEN') != None: basecmd += [ '-e', 'KAGGLE_API_TOKEN' ]
     basecmd += [ 'chunyingh/hallucinator' ]
     if cmd == None:
-        print('>>> ENTERING INTERACTIVE MODE')
-        subprocess.run(basecmd + [ 'bash', '-l' ])
+        print('>>> ENTERING INTERACTIVE MODE', flush=True)
+        return subprocess.run(basecmd + [ 'bash', '-l' ]).returncode
     else:
-        print('>>> UPDATING DATABASE')
-        subprocess.run(basecmd + cmd)
+        print(f'>>> UPDATING DATABASE: {name}', flush=True)
+        return subprocess.run(basecmd + cmd).returncode
 
 if 'shell' in sys.argv[1:]:
-    _docker_run()
-    sys.exit(0)
+    sys.exit(_docker_run())
 
 if len(sys.argv[1:]) <= 0:
-    for d in db:
-        if db[d]['default']: _docker_run([ 'hallucinator-cli', db[d]['cmd'], f'./{db[d]["db"]}' ])
+    targets = [ d for d in db if db[d]['default'] ]
 else:
-    for d in sys.argv[1:]:
-        if d in db: _docker_run([ 'hallucinator-cli', db[d]['cmd'], f'./{db[d]["db"]}' ])
+    unknown = [ d for d in sys.argv[1:] if d not in db ]
+    if len(unknown) > 0:
+        print('# unknown db name(s): ' + ' '.join(unknown))
+        sys.exit(1)
+    targets = list(dict.fromkeys(sys.argv[1:]))
+
+failed = []
+for d in targets:
+    if _docker_run([ 'hallucinator-cli', db[d]['cmd'], f'./{db[d]["db"]}' ], d) != 0:
+        failed.append(d)
+
+# the entrypoint hands /db to USER_UID:USER_GID before the update runs, so the
+# files downloaded above are still owned by root; hand them over again
+subprocess.run([ 'docker', 'run', '--rm', '-v', 'hallucinator:/db', 'chunyingh/hallucinator',
+    'chown', '-R', f'{uid}:{gid}', '/db' ])
+
+if len(failed) > 0:
+    print('# failed to update: ' + ' '.join(failed))
+    sys.exit(1)
 
 # vim: set tabstop=4 expandtab shiftwidth=4 softtabstop=4 number cindent fileencoding=utf-8 :
