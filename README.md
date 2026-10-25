@@ -10,20 +10,21 @@ bibliographic databases.
 
 ## Requirements
 
-- Docker
+- Docker with the Buildx plugin (included in Docker Desktop and recent Docker Engine releases)
 - Python 3 (for the `hallucinator` and `update-db` wrapper scripts)
 
 ## Repository layout
 
 | Path                   | Description                                                        |
 |------------------------|--------------------------------------------------------------------|
-| `build.sh`             | Builds the `chunyingh/hallucinator` Docker image                   |
+| `build.sh`             | Builds the `chunyingh/hallucinator` Docker image, or pushes a multi-arch build to Docker Hub |
 | `hallucinator`         | Runs `hallucinator-tui` on a file inside the container             |
 | `update-db`            | Downloads or updates the offline databases in the `hallucinator` volume |
 | `docker/Dockerfile`    | Multi-stage build: compiles the Rust tools, then copies them into an Alpine runtime image |
 | `docker/tini.sh`       | Container entrypoint: hands `/db` to your UID/GID, then starts `tini` |
 | `docker/entrypoint.sh` | Default container command (keeps the container idle)               |
 | `docker/profile`       | Shell prompt and aliases for interactive sessions                  |
+| `BUILDX`               | One-time commands to set up a multi-arch `buildx` builder for `build.sh push` |
 
 ## Build the image
 
@@ -31,10 +32,58 @@ bibliographic databases.
 sh build.sh
 ```
 
-The build clones the latest upstream `hallucinator` source and compiles
-`hallucinator-tui` and `hallucinator-cli` with `cargo build --release`. The
-binaries are installed into an Alpine-based runtime image tagged
-`chunyingh/hallucinator`. To pick up upstream changes, run the build again.
+The build uses `docker buildx build --load`. It clones the latest upstream
+`hallucinator` source and compiles `hallucinator-tui` and `hallucinator-cli`
+with `cargo build --release`. The binaries are installed into an Alpine-based
+runtime image tagged `chunyingh/hallucinator:latest`, built for your machine's
+architecture and loaded into the local Docker image store. To pick up upstream
+changes, run the build again.
+
+If you skip the build, the wrapper scripts make `docker run` pull
+`chunyingh/hallucinator` from Docker Hub the first time they run.
+
+### Optional: push a multi-arch image to Docker Hub
+
+```sh
+sh build.sh push
+```
+
+This builds for `linux/amd64` and `linux/arm64` and pushes the result to
+Docker Hub as `chunyingh/hallucinator:latest`. The image is not loaded into
+the local image store. Before the first push:
+
+1. Log in to Docker Hub with an account that can push to the repository:
+
+   ```sh
+   docker login
+   ```
+
+2. Create a builder that uses the `docker-container` driver, because the
+   default `docker` driver usually cannot build multi-platform images. The
+   commands are also in the `BUILDX` file:
+
+   ```sh
+   docker buildx create --name multiarch-builder --driver docker-container --use
+   docker buildx inspect --bootstrap   # start the builder and list supported platforms
+   docker buildx ls                    # confirm multiarch-builder is selected (*)
+   ```
+
+   You only need to do this once per machine. `--use` makes it the current
+   builder; to switch back later, run `docker buildx use default`.
+
+   To build the platform that does not match your host, the builder uses QEMU
+   emulation. Docker Desktop includes it. On Linux, if `inspect` does not list
+   both platforms, install the emulators:
+
+   ```sh
+   docker run --privileged --rm tonistiigi/binfmt --install all
+   ```
+
+   Compiling Rust under emulation is slow, so expect the cross-architecture
+   half of the build to take much longer than the native one.
+
+To push to your own Docker Hub repository, change the `-t` tag in `build.sh`
+and the image name in `hallucinator` and `update-db` to match.
 
 ## Offline databases
 
