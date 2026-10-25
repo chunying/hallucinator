@@ -5,7 +5,8 @@ This repository packages [gianlucasb/hallucinator](https://github.com/gianlucasb
 a tool that checks the references in a paper for citations that do not exist,
 into a Docker image. Thin wrapper scripts run the tool inside a disposable
 container. The container can only see the directory holding the file you are
-checking and the local `db/` directory of offline bibliographic databases.
+checking and a Docker volume named `hallucinator` that stores the offline
+bibliographic databases.
 
 ## Requirements
 
@@ -18,9 +19,9 @@ checking and the local `db/` directory of offline bibliographic databases.
 |------------------------|--------------------------------------------------------------------|
 | `build.sh`             | Builds the `chuang/hallucinator` Docker image                      |
 | `hallucinator`         | Runs `hallucinator-tui` on a file inside the container             |
-| `update-db`            | Downloads or updates the offline databases into `db/`              |
-| `db/`                  | Holds the offline database files (ignored by git)                  |
+| `update-db`            | Downloads or updates the offline databases in the `hallucinator` volume |
 | `docker/Dockerfile`    | Multi-stage build: compiles the Rust tools, then copies them into an Alpine runtime image |
+| `docker/tini.sh`       | Container entrypoint: hands `/db` to your UID/GID, then starts `tini` |
 | `docker/entrypoint.sh` | Default container command (keeps the container idle)               |
 | `docker/profile`       | Shell prompt and aliases for interactive sessions                  |
 
@@ -38,12 +39,14 @@ binaries are installed into an Alpine-based runtime image tagged
 ## Offline databases
 
 Lookups against local copies of the major bibliographic indexes are faster and
-more reliable than online queries. `update-db` runs `hallucinator-cli` in the
-container to fetch them into `db/`:
+more reliable than online queries. The databases live in a Docker volume named
+`hallucinator`, which Docker creates on first use. `update-db` runs
+`hallucinator-cli` in the container to fetch them into that volume:
 
 ```sh
 ./update-db                 # update the default set: dblp, acl, iacr
 ./update-db arxiv openalex  # update only the named databases
+./update-db shell           # open a shell in the container with the volume at /db
 ```
 
 | Name       | File           | Updated by default |
@@ -61,8 +64,14 @@ environment, it is passed into the container for the Kaggle-hosted downloads:
 KAGGLE_API_TOKEN=... ./update-db arxiv
 ```
 
-The databases can be large (`dblp.db` alone is several GB). `.gitignore` keeps
-them out of the repository.
+The databases can be large (`dblp.db` alone is several GB). Because they are
+kept in the volume rather than in this repository, they persist across image
+rebuilds. To see where Docker stores them, or to reclaim the space:
+
+```sh
+docker volume inspect hallucinator
+docker volume rm hallucinator   # deletes all downloaded databases
+```
 
 ## Check a paper
 
@@ -74,10 +83,11 @@ Supported inputs are files ending in `.pdf`, `.bbl`, `.bib`, `.zip` or `.gz`.
 The script:
 
 1. Finds the first argument with a supported extension and mounts its directory
-   as `/working` in the container. This is the only part of the host file
-   system the tool can see, apart from `db/`.
-2. Mounts `db/` as `/db` and adds the matching `--*-offline` option for each
-   database file that is present.
+   as `/home/workdir` in the container. This is the only part of the host file
+   system the tool can see.
+2. Mounts the `hallucinator` volume as `/db`. In the image,
+   `~/.local/share/hallucinator` links to `/db`, so `hallucinator-tui` finds the
+   offline databases in its default location without extra options.
 3. Runs `hallucinator-tui` as your own UID/GID, so any output files belong to
    you. The container is removed when the tool exits.
 
@@ -91,8 +101,8 @@ available options, see the upstream project or run:
 ### Interactive shell
 
 Running `./hallucinator` without arguments prints the usage line and opens a
-login shell in the container, with the current directory mounted at `/working`
-and `db/` at `/db`. From there you can run `hallucinator-tui` or
+login shell in the container, with the current directory mounted at
+`/home/workdir` and the `hallucinator` volume at `/db`. From there you can run `hallucinator-tui` or
 `hallucinator-cli` by hand.
 
 ## License
